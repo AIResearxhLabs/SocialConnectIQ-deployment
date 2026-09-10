@@ -42,6 +42,7 @@
 | **CP-28** | Add GitHub Secrets to all repos | GitHub UI | 🔲 | — |
 | **CP-29** | First real release: trigger `release-and-build.yml` | GitHub Actions | 🔲 | — |
 | **CP-30** | First production deployment | GitHub Actions | 🔲 | — |
+| **CP-31** | DevOps Dashboard UI — FastAPI backend + React frontend | deployment | ✅ | 2026-10-09 |
 
 ---
 

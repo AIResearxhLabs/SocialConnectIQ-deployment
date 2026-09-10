@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  # ─── Dashboard Backend ────────────────────────────────────────────────────
+  dashboard-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_ORG=${GITHUB_ORG:-AIResearxhLabs}
+      - DEPLOYMENT_REPO=${DEPLOYMENT_REPO:-SocialConnectIQ-deployment}
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+      - HEALTH_POLL_INTERVAL=${HEALTH_POLL_INTERVAL:-30}
+      - PROD_API_GATEWAY_URL=${PROD_API_GATEWAY_URL:-https://api-gateway-lk7iu4bo5q-uc.a.run.app}
+    volumes:
+      - dashboard-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ─── Dashboard Frontend ───────────────────────────────────────────────────
+  dashboard-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - dashboard-backend
+    restart: unless-stopped
+
+volumes:
+  dashboard-data:
