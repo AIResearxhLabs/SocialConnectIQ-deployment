@@ -1,0 +1,266 @@
+# Role-Based Access Control Configuration
+#
+# This file defines user roles and their permissions for deployment operations.
+# The deployment agent enforces these permissions before allowing any deployment.
+
+roles:
+  # Developer Role - All team members
+  developer:
+    name: "Developer"
+    description: "Standard developer role - can deploy to local Docker Desktop only"
+    
+    # Allowed environments
+    environments:
+      - local
+    
+    # Permissions
+    permissions:
+      - "deploy:local"
+      - "view:logs:local"
+      - "view:status:local"
+      - "run:health-checks:local"
+    
+    # Restrictions
+    restrictions:
+      - "Cannot deploy to staging or production"
+      - "Cannot approve deployments"
+      - "Cannot rollback deployments"
+    
+    # Default settings
+    requires_approval: false
+    max_concurrent_deployments: 3
+  
+  # Staging Ops - Few colleagues authorized for staging
+  staging-ops:
+    name: "Staging Operations"
+    description: "Authorized colleagues who can deploy to staging environment"
+    
+    # Allowed environments
+    environments:
+      - local
+      - staging
+    
+    # Permissions
+    permissions:
+      - "deploy:local"
+      - "deploy:staging"
+      - "view:logs:local"
+      - "view:logs:staging"
+      - "view:status:*"
+      - "run:health-checks:*"
+      - "approve:staging"
+      - "view:deployment-history:staging"
+    
+    # Restrictions
+    restrictions:
+      - "Cannot deploy to production"
+      - "Cannot approve production deployments"
+      - "Cannot perform emergency rollbacks"
+    
+    # Default settings
+    requires_approval: true  # For staging deployments
+    approval_count: 1
+    max_concurrent_deployments: 2
+    
+    # Notification settings
+    notify_on:
+      - "deployment:start"
+      - "deployment:complete"
+      - "deployment:failed"
+      - "approval:requested"
+  
+  # Production Ops - Few colleagues authorized for production
+  prod-ops:
+    name: "Production Operations"
+    description: "Senior colleagues authorized for production deployments"
+    
+    # Allowed environments
+    environments:
+      - local
+      - staging
+      - production
+    
+    # Permissions
+    permissions:
+      - "deploy:*"
+      - "view:logs:*"
+      - "view:status:*"
+      - "run:health-checks:*"
+      - "approve:production"
+      - "rollback:production"
+      - "view:deployment-history:*"
+      - "emergency:stop-deployment"
+    
+    # Restrictions
+    restrictions:
+      - "Production deployment requires 2 approvals (including their own)"
+      - "Cannot bypass approval workflows"
+    
+    # Default settings
+    requires_approval: true
+    approval_count: 2  # Production requires 2 approvals
+    max_concurrent_deployments: 1  # Only one prod deployment at a time
+    
+    # Notification settings
+    notify_on:
+      - "deployment:start"
+      - "deployment:complete"
+      - "deployment:failed"
+      - "approval:requested"
+      - "approval:granted"
+      - "rollback:initiated"
+    
+    # Safety features
+    safety:
+      require_staging_healthy: true
+      prevent_concurrent_prod_deploys: true
+      enforce_deployment_window: false  # Can be enabled for change windows
+  
+  # Admin - Full access
+  admin:
+    name: "Administrator"
+    description: "Full system access - engineering leads and DevOps team"
+    
+    # Allowed environments
+    environments:
+      - local
+      - staging
+      - production
+    
+    # Permissions
+    permissions:
+      - "*"  # All permissions
+    
+    # No restrictions
+    restrictions: []
+    
+    # Default settings
+    requires_approval: false  # Admins can override (but still recommended)
+    approval_count: 0
+    max_concurrent_deployments: 5
+    
+    # Admin-specific abilities
+    admin_abilities:
+      - "bypass-approval-workflow"
+      - "force-deployment"
+      - "emergency-rollback"
+      - "modify-configurations"
+      - "view-all-deployments"
+      - "manage-user-roles"
+    
+    # Notification settings
+    notify_on:
+      - "*"  # Notify on all events
+
+# User-to-Role Mapping
+# 
+# In production, this should be managed via external identity provider (e.g., Google Workspace, Okta)
+# For local development and testing, you can hardcode mappings here
+users:
+  # Example mappings - UPDATE THESE WITH YOUR TEAM MEMBERS
+  
+  # Developers (replace with actual email addresses)
+  "developer1@company.com":
+    role: developer
+    name: "Developer One"
+    joined_date: "2024-01-15"
+  
+  "developer2@company.com":
+    role: developer
+    name: "Developer Two"
+    joined_date: "2024-02-20"
+  
+  # Staging Ops (replace with actual authorized colleagues)
+  "staging-ops1@company.com":
+    role: staging-ops
+    name: "Staging Operator One"
+    joined_date: "2024-01-10"
+  
+  "staging-ops2@company.com":
+    role: staging-ops
+    name: "Staging Operator Two"
+    joined_date: "2024-01-10"
+  
+  # Production Ops (replace with actual authorized colleagues)
+  "prod-ops1@company.com":
+    role: prod-ops
+    name: "Production Operator One"
+    joined_date: "2024-01-01"
+  
+  "prod-ops2@company.com":
+    role: prod-ops
+    name: "Production Operator Two"
+    joined_date: "2024-01-01"
+  
+  # Admins
+  "admin@company.com":
+    role: admin
+    name: "System Administrator"
+    joined_date: "2024-01-01"
+
+# Default role for unknown users
+default_role: developer
+
+# Authentication settings
+authentication:
+  # Method for identifying users
+  method: "environment"  # Options: "environment", "github", "gcp", "manual"
+  
+  # Environment variable to check for user identity
+  user_env_var: "DEPLOYMENT_USER"
+  
+  # Fallback email if no authentication available
+  fallback_email: "unknown@localhost"
+  fallback_role: "developer"
+  
+  # For GitHub authentication
+  github:
+    enabled: false
+    org_name: "AIResearxhLabs"
+    team_mapping:
+      "developers": developer
+      "staging-team": staging-ops
+      "prod-team": prod-ops
+      "devops": admin
+  
+  # For GCP authentication
+  gcp:
+    enabled: false
+    project_id: "socialconnectiq-prod"
+    use_service_account_email: true
+
+# Approval workflow settings
+approval_workflow:
+  # Timeout for approval requests
+  timeout_minutes: 30
+  
+  # Reminder intervals
+  reminder_interval_minutes: 10
+  
+  # Auto-reject on timeout
+  auto_reject_on_timeout: true
+  
+  # Require reason for rejection
+  require_rejection_reason: true
+  
+  # Track approval history
+  log_approvals: true
+  approval_log_file: "./logs/approvals.log"
+
+# Audit logging
+audit:
+  enabled: true
+  log_file: "./logs/audit.log"
+  log_format: "json"
+  
+  # Events to audit
+  events:
+    - "deployment:initiated"
+    - "deployment:completed"
+    - "deployment:failed"
+    - "approval:requested"
+    - "approval:granted"
+    - "approval:denied"
+    - "rollback:initiated"
+    - "permission:denied"
+    - "authentication:failed"

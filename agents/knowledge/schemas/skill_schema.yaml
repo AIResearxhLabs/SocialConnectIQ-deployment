@@ -1,0 +1,361 @@
+# Skill Knowledge Schema Definition
+# Version: 1.0.0
+#
+# This schema defines the structure for representing skills as declarative knowledge
+# rather than imperative code. Agents interpret these artifacts to understand and
+# apply skills in context.
+
+schema_version: "1.0.0"
+
+skill_structure:
+  # === METADATA ===
+  # Identification and versioning information
+  metadata:
+    id:
+      type: string
+      required: true
+      description: "Unique identifier (e.g., skill-preflight-validation-v1)"
+      pattern: "^skill-[a-z0-9-]+-v[0-9]+$"
+    
+    name:
+      type: string
+      required: true
+      description: "Human-readable skill name"
+    
+    version:
+      type: string
+      required: true
+      description: "Semantic version (major.minor.patch)"
+      pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    
+    category:
+      type: string
+      required: true
+      description: "Skill classification"
+      enum:
+        - deployment_preparation
+        - deployment_execution
+        - validation
+        - monitoring
+        - remediation
+        - optimization
+    
+    tags:
+      type: array
+      items: string
+      description: "Searchable tags for skill discovery"
+    
+    created_at:
+      type: timestamp
+      required: true
+    
+    updated_at:
+      type: timestamp
+      required: true
+  
+  # === UNDERSTANDING ===
+  # Conceptual knowledge about the skill
+  understanding:
+    purpose:
+      type: string
+      required: true
+      description: "What this skill accomplishes"
+    
+    when_to_use:
+      type: string
+      required: true
+      description: "Context and conditions for skill application"
+    
+    prerequisites:
+      type: array
+      items: string
+      description: "Required conditions before skill can be applied"
+    
+    importance:
+      type: enum
+      required: true
+      values: [CRITICAL, HIGH, MEDIUM, LOW]
+      description: "Priority level for skill execution"
+    
+    expected_outcomes:
+      type: array
+      items: string
+      description: "What should result from successful skill application"
+  
+  # === KNOWLEDGE DOMAINS ===
+  # Areas of expertise this skill encompasses
+  knowledge_domains:
+    type: array
+    items:
+      domain:
+        type: string
+        required: true
+        description: "Knowledge domain name (e.g., docker_operations)"
+      
+      concepts:
+        type: array
+        items: string
+        description: "Key concepts within this domain"
+      
+      relationships:
+        type: array
+        items: string
+        description: "How concepts relate (cause-effect, dependencies)"
+      
+      constraints:
+        type: array
+        items: string
+        description: "Limitations and boundaries"
+  
+  # === DECISION PATTERNS ===
+  # Reasoning logic for skill application
+  decision_patterns:
+    type: array
+    description: "Conditional logic defining when and how to act"
+    items:
+      condition:
+        type: string
+        required: true
+        description: "When to apply this pattern (evaluated expression)"
+      
+      action:
+        type: string
+        required: true
+        description: "What action to take"
+      
+      priority:
+        type: enum
+        required: true
+        values: [CRITICAL, HIGH, MEDIUM, LOW]
+      
+      tools_required:
+        type: array
+        items: string
+        description: "Which tools agent needs to invoke"
+      
+      success_criteria:
+        type: string
+        required: true
+        description: "How to determine if action succeeded"
+      
+      failure_handling:
+        type: string
+        required: true
+        description: "What to do when action fails"
+        examples:
+          - "BLOCK deployment with remediation message"
+          - "WARN and continue with degraded capability"
+          - "RETRY with exponential backoff"
+      
+      metadata:
+        type: object
+        description: "Additional pattern-specific data"
+  
+  # === TOOL SEQUENCES ===
+  # Step-by-step procedures using available tools
+  tool_sequences:
+    type: array
+    description: "Predefined sequences of tool invocations"
+    items:
+      sequence_name:
+        type: string
+        required: true
+      
+      description:
+        type: string
+        description: "What this sequence accomplishes"
+      
+      steps:
+        type: array
+        required: true
+        items:
+          tool:
+            type: string
+            required: true
+            description: "Tool name (execute_command, read_file, etc.)"
+          
+          action:
+            type: string
+            required: true
+            description: "Specific action to perform"
+          
+          inputs:
+            type: object
+            required: true
+            description: "Input parameters for tool invocation"
+          
+          outputs:
+            type: array
+            items: string
+            description: "Expected output variables"
+          
+          validation:
+            type: string
+            required: true
+            description: "How to validate step succeeded"
+          
+          on_failure:
+            type: string
+            description: "Failure handling strategy"
+  
+  # === LEARNING EXAMPLES ===
+  # Historical scenarios for pattern recognition
+  learning_examples:
+    type: array
+    description: "Past executions with outcomes and insights"
+    items:
+      scenario:
+        type: string
+        required: true
+        description: "Descriptive name of scenario"
+      
+      context:
+        type: object
+        required: true
+        description: "Environmental and situational context"
+        properties:
+          environment: string
+          timestamp: timestamp
+          user_role: string
+          system_state: object
+      
+      actions_taken:
+        type: array
+        items: string
+        description: "Sequence of actions performed"
+      
+      outcome:
+        type: enum
+        required: true
+        values: [SUCCESS, FAILURE, PARTIAL, TIMEOUT]
+      
+      metrics:
+        type: object
+        description: "Quantitative measurements"
+        examples:
+          execution_time_ms: number
+          resource_usage: object
+          error_count: number
+      
+      insights:
+        type: string
+        required: true
+        description: "What was learned from this scenario"
+      
+      remediation_applied:
+        type: string
+        description: "How issues were resolved"
+  
+  # === PERFORMANCE METRICS ===
+  # Historical performance data
+  performance_metrics:
+    success_rate:
+      type: float
+      required: true
+      description: "Percentage of successful executions (0.0-1.0)"
+      range: [0.0, 1.0]
+    
+    avg_execution_time_seconds:
+      type: float
+      required: true
+      description: "Average time to complete skill"
+    
+    failure_modes:
+      type: array
+      items:
+        mode: string
+        frequency: float
+        impact: enum [BLOCKING, DEGRADED, RECOVERABLE]
+      description: "Common failure patterns and their characteristics"
+    
+    optimization_opportunities:
+      type: array
+      items: string
+      description: "Identified ways to improve skill performance"
+    
+    last_executed:
+      type: timestamp
+      description: "Most recent execution timestamp"
+    
+    execution_count:
+      type: integer
+      description: "Total number of times skill has been applied"
+  
+  # === EVOLUTION ===
+  # Learning and adaptation configuration
+  evolution:
+    learning_enabled:
+      type: boolean
+      required: true
+      description: "Whether skill can evolve based on outcomes"
+    
+    feedback_loops:
+      type: array
+      items: string
+      description: "Mechanisms for collecting learning data"
+      examples:
+        - "Track failure patterns over rolling 30-day window"
+        - "Correlate check failures with deployment outcomes"
+        - "Monitor time-to-remediation for each failure type"
+    
+    adaptation_rules:
+      type: array
+      items:
+        condition:
+          type: string
+          required: true
+          description: "When to trigger adaptation"
+        
+        action:
+          type: string
+          required: true
+          description: "How to adapt skill"
+        
+        requires_approval:
+          type: boolean
+          description: "Whether human approval needed"
+    
+    versioning_strategy:
+      type: string
+      description: "How skill versions are managed"
+      enum:
+        - auto_increment_patch
+        - require_manual_version
+        - semantic_based_on_changes
+
+# === VALIDATION RULES ===
+validation:
+  required_sections:
+    - metadata
+    - understanding
+    - decision_patterns
+  
+  conditional_requirements:
+    - if: "learning_enabled == true"
+      then: "learning_examples must be present"
+    
+    - if: "importance == CRITICAL"
+      then: "failure_handling must specify BLOCK strategy"
+  
+  best_practices:
+    - "Include at least 3 learning_examples for mature skills"
+    - "Tool sequences should have clear validation at each step"
+    - "Decision patterns should cover both happy path and edge cases"
+    - "Success criteria should be objectively measurable"
+
+# === USAGE NOTES ===
+usage_notes: |
+  This schema defines skills as declarative knowledge that agents can reason about
+  rather than imperative code they must execute. Key principles:
+  
+  1. UNDERSTANDING over execution: Agents should understand WHY before doing WHAT
+  2. ADAPTATION over rigidity: Skills evolve based on real-world outcomes
+  3. REASONING over scripting: Agents apply skills contextually, not blindly
+  4. LEARNING over static code: Each execution contributes to skill improvement
+  
+  When creating a skill:
+  - Start with clear understanding and prerequisites
+  - Define decision patterns with explicit success/failure criteria
+  - Provide tool sequences as guidance, not rigid scripts
+  - Include learning examples from real scenarios
+  - Enable evolution with feedback loops and adaptation rules

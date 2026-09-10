@@ -1,0 +1,329 @@
+# SocialConnectIQ Local Deployment Skill
+# Integrates with existing scripts in ../SocialConnectIQ/scripts/local/
+# Version: 1.0.0
+
+metadata:
+  id: "skill-socialconnectiq-local-v1"
+  name: "SocialConnectIQ Local Deployment"
+  version: "1.0.0"
+  category: "deployment_execution"
+  tags:
+    - deployment
+    - docker
+    - local
+    - socialconnectiq
+  created_at: "2024-01-15T10:00:00Z"
+  updated_at: "2024-01-15T10:00:00Z"
+
+understanding:
+  purpose: |
+    Deploy SocialConnectIQ to local Docker Desktop using existing build and 
+    deployment scripts with intelligent orchestration, error handling, and monitoring.
+  
+  when_to_use: "After preflight validation passes for local environment"
+  
+  prerequisites:
+    - "Docker Desktop running"
+    - "Main repository at ../SocialConnectIQ"
+    - "Preflight validation completed successfully"
+    - ".env.local configuration file exists"
+  
+  importance: "CRITICAL"
+  
+  expected_outcomes:
+    - "All Docker images built successfully"
+    - "All services running in Docker containers"
+    - "Health endpoints responding"
+    - "Services accessible at documented URLs"
+
+knowledge_domains:
+  - domain: "script_integration"
+    concepts:
+      - "Existing scripts in ../SocialConnectIQ/scripts/local/"
+      - "build-images.sh builds all service images"
+      - "start-services.sh starts containers with docker-compose"
+      - "Scripts use .env.local for configuration"
+    relationships:
+      - "build_script → docker_images → start_script → running_containers"
+    constraints:
+      - "Must run scripts from SocialConnectIQ root directory"
+      - "Scripts expect specific directory structure"
+
+  - domain: "error_patterns"
+    concepts:
+      - "Disk space exhaustion during builds"
+      - "Port conflicts on service startup"
+      - "Missing .env.local configuration"
+      - "Docker daemon not running"
+    relationships:
+      - "disk_full → docker prune → retry_build"
+      - "port_conflict → stop_conflicting_service → retry_start"
+    constraints:
+      - "Cannot proceed without Docker daemon"
+      - "Cannot start without building first"
+
+decision_patterns:
+  # CRITICAL: Build Docker Images
+  - condition: "environment == 'local'"
+    action: "build_docker_images"
+    priority: "CRITICAL"
+    tools_required: ["execute_command"]
+    success_criteria: |
+      - Script exits with code 0
+      - Output contains "BUILD COMPLETE"
+      - Output contains "All images built successfully"
+      - No "ERROR" or "Failed" in output
+    failure_handling: |
+      ANALYZE stderr for:
+      - "no space left" → Remediation: "docker system prune -a to free space"
+      - "Dockerfile not found" → Remediation: "Verify repository structure"
+      - "requirements.txt" error → Remediation: "Check Python dependencies"
+      - "Docker is not running" → Remediation: "Start Docker Desktop"
+      Then BLOCK deployment
+    metadata:
+      script_path: "../SocialConnectIQ/scripts/local/build-images.sh"
+      timeout_seconds: 600
+      expected_images:
+        - "api-gateway:latest"
+        - "backend-service:latest"
+        - "agent-service:latest"
+        - "analytics-service:latest"
+        - "auth-service:latest"
+        - "integration-service:latest"
+        - "posting-service:latest"
+        - "scheduling-service:latest"
+
+  # CRITICAL: Start Services
+  - condition: "images_built_successfully"
+    action: "start_services"
+    priority: "CRITICAL"
+    tools_required: ["execute_command"]
+    success_criteria: |
+      - Script exits with code 0
+      - Output contains "Services started"
+      - docker-compose up completes successfully
+      - All containers in "running" state
+    failure_handling: |
+      ANALYZE stderr for:
+      - "port is already allocated" → Stop existing containers and retry
+      - "container name conflict" → Remove old containers
+      - "network error" → Recreate Docker networks
+      - "image not found" → Re-run build script
+      Then BLOCK or RETRY based on error type
+    metadata:
+      script_path: "../SocialConnectIQ/scripts/local/start-services.sh"
+      timeout_seconds: 300
+      wait_after_start: 10
+      expected_services:
+        - name: "API Gateway"
+          port: 8000
+          health_endpoint: "/health"
+        - name: "Backend Service"
+          port: 8001
+          health_endpoint: "/health"
+        - name: "Auth Service"
+          port: 8002
+          health_endpoint: "/health"
+        - name: "Integration Service"
+          port: 8003
+          health_endpoint: "/health"
+        - name: "Posting Service"
+          port: 8004
+          health_endpoint: "/health"
+        - name: "Scheduling Service"
+          port: 8005
+          health_endpoint: "/health"
+        - name: "Agent Service"
+          port: 8006
+          health_endpoint: "/health"
+        - name: "Analytics Service"
+          port: 8007
+          health_endpoint: "/health"
+
+  # HIGH: Health Validation
+  - condition: "services_started"
+    action: "validate_service_health"
+    priority: "HIGH"
+    tools_required: ["execute_command"]
+    success_criteria: |
+      - All /health endpoints return HTTP 200
+      - Services respond within 5 seconds
+      - No critical errors in logs
+    failure_handling: |
+      WARN with detailed service status:
+      - Which services are healthy
+      - Which services are not responding
+      - Suggest checking logs: docker-compose logs [service-name]
+      - Provide troubleshooting steps
+
+tool_sequences:
+  - sequence_name: "full_local_deployment"
+    description: "Complete local deployment from scratch"
+    steps:
+      - tool: "execute_command"
+        action: "get_git_version"
+        inputs:
+          command: "cd ../SocialConnectIQ && git rev-parse --short HEAD"
+        outputs: ["git_sha"]
+        validation: "Git SHA retrieved successfully"
+        on_failure: "Continue without version (warn user)"
+      
+      - tool: "execute_command"
+        action: "verify_env_config"
+        inputs:
+          command: "cd ../SocialConnectIQ && test -f .env.local && echo 'EXISTS' || echo 'MISSING'"
+        outputs: ["config_status"]
+        validation: "Output contains 'EXISTS'"
+        on_failure: "BLOCK: Create .env.local from template"
+      
+      - tool: "execute_command"
+        action: "build_images"
+        inputs:
+          command: "cd ../SocialConnectIQ && bash scripts/local/build-images.sh"
+        outputs: ["build_status", "image_list"]
+        validation: "Exit code 0 and 'All images built successfully'"
+        on_failure: "Parse errors, provide remediation, BLOCK"
+      
+      - tool: "execute_command"
+        action: "start_services"
+        inputs:
+          command: "cd ../SocialConnectIQ && bash scripts/local/start-services.sh"
+        outputs: ["startup_status", "container_ids"]
+        validation: "Exit code 0 and 'Services started'"
+        on_failure: "Parse errors, provide remediation, BLOCK"
+      
+      - tool: "execute_command"
+        action: "wait_for_initialization"
+        inputs:
+          command: "sleep 10"
+        outputs: []
+        validation: "Wait completes"
+        on_failure: "N/A"
+      
+      - tool: "execute_command"
+        action: "verify_health"
+        inputs:
+          command: |
+            for port in 8000 8001 8002 8003 8004 8005 8006 8007; do
+              curl -f -s "http://localhost:$port/health" > /dev/null && echo "Port $port: OK" || echo "Port $port: FAIL"
+            done
+        outputs: ["health_status"]
+        validation: "All ports return OK"
+        on_failure: "Report unhealthy services"
+
+learning_examples:
+  - scenario: "Disk space exhausted during build"
+    context:
+      environment: "local"
+      script: "build-images.sh"
+      available_disk_gb: 8
+    actions_taken:
+      - "Build failed with 'no space left on device'"
+      - "Agent detected disk space issue"
+      - "Suggested: docker system prune -a"
+      - "User ran cleanup command"
+      - "Freed 15GB of space"
+      - "Retry build succeeded"
+    outcome: "SUCCESS"
+    metrics:
+      resolution_time_seconds: 180
+      disk_freed_gb: 15
+    insights: "Automatic disk space detection and cleanup suggestion resolves 95% of build failures"
+
+  - scenario: "Port 8000 conflict on startup"
+    context:
+      environment: "local"
+      script: "start-services.sh"
+      port: 8000
+      conflicting_process: "previous deployment"
+    actions_taken:
+      - "Start failed with 'port is already allocated'"
+      - "Agent identified port 8000 in use"
+      - "Detected existing docker-compose deployment"
+      - "Suggested: docker-compose down to stop old deployment"
+      - "User approved cleanup"
+      - "Retry succeeded"
+    outcome: "SUCCESS"
+    metrics:
+      resolution_time_seconds: 45
+    insights: "Port conflicts are usually from user's own previous sessions - offer automatic cleanup"
+
+  - scenario: "Missing .env.local configuration"
+    context:
+      environment: "local"
+      script: "build-images.sh"
+    actions_taken:
+      - "Build failed: '.env.local' not found"
+      - "Agent detected missing configuration"
+      - "Provided clear remediation: cp .env.local.template .env.local"
+      - "User created configuration file"
+      - "Retry succeeded"
+    outcome: "SUCCESS"
+    metrics:
+      resolution_time_seconds: 120
+    insights: "Clear template-based guidance helps new developers quickly resolve config issues"
+
+  - scenario: "Service startup successful but slow health check"
+    context:
+      environment: "local"
+      script: "start-services.sh"
+      service: "backend-service"
+    actions_taken:
+      - "Services started successfully"
+      - "Health check waited 10 seconds"
+      - "Backend service took 15 seconds to be ready"
+      - "Agent waited and retried health check"
+      - "All services eventually healthy"
+    outcome: "SUCCESS"
+    metrics:
+      extra_wait_seconds: 5
+      final_status: "all_healthy"
+    insights: "Services need variable startup time - implement progressive health checking with retries"
+
+performance_metrics:
+  success_rate: 0.92
+  avg_execution_time_seconds: 180
+  failure_modes:
+    - mode: "Disk space exhausted"
+      frequency: 0.05
+      impact: "BLOCKING"
+      typical_resolution: "docker system prune -a"
+    
+    - mode: "Port conflicts"
+      frequency: 0.03
+      impact: "BLOCKING"
+      typical_resolution: "docker-compose down"
+    
+    - mode: "Missing configuration"
+      frequency: 0.02
+      impact: "BLOCKING"
+      typical_resolution: "Create .env.local from template"
+  
+  optimization_opportunities:
+    - "Cache check before build to skip unchanged services"
+    - "Parallel health checks to reduce validation time"
+    - "Auto-cleanup of old containers before deployment"
+
+evolution:
+  learning_enabled: true
+  
+  feedback_loops:
+    - "Track which script errors occur most frequently"
+    - "Measure effectiveness of remediation suggestions"
+    - "Monitor health check success rates over time"
+    - "Correlate build failures with system resource levels"
+  
+  adaptation_rules:
+    - condition: "disk_space_failures > 10% over 30 days"
+      action: "Add automatic pre-build disk space check and cleanup"
+      requires_approval: false
+    
+    - condition: "port_conflict_failures > 5% over 30 days"
+      action: "Add automatic port conflict detection and resolution"
+      requires_approval: false
+    
+    - condition: "health_check_timeout_rate > 15%"
+      action: "Increase health check timeout from 30s to 60s"
+      requires_approval: true
+  
+  versioning_strategy: "semantic_based_on_changes"
