@@ -1,0 +1,385 @@
+# Environment-Specific Deployment Configuration
+# 
+# This file defines the deployment settings for each environment (local, staging, production).
+# The deployment agent uses these configurations to determine how to deploy services.
+
+environments:
+  # Local Development Environment (Docker Desktop)
+  local:
+    name: "Local Development"
+    target: "docker-desktop"
+    description: "Local Docker Desktop deployment for all developers"
+    
+    # Main repository configuration
+    main_repo_path: "../SocialConnectIQ"
+    scripts_dir: "../SocialConnectIQ/scripts/local"
+    
+    # Deployment strategy
+    backend_deploy_method: "existing-scripts"  # Uses build-images.sh and start-services.sh
+    frontend_deploy_method: "local-server"
+    
+    # Service URLs (localhost)
+    services:
+      api-gateway:
+        url: "http://localhost:8080"
+        health_endpoint: "/health"
+        container_name: "socialconnectiq-api-gateway"
+      
+      backend-service:
+        url: "http://localhost:8081"
+        health_endpoint: "/health"
+        container_name: "socialconnectiq-backend"
+      
+      integration-service:
+        url: "http://localhost:8082"
+        health_endpoint: "/health"
+        container_name: "socialconnectiq-integration"
+      
+      agent-service:
+        url: "http://localhost:8083"
+        health_endpoint: "/health"
+        container_name: "socialconnectiq-agent"
+    
+    frontend:
+      url: "http://localhost:3000"
+      build_command: "npm run build"
+      start_command: "npm start"
+    
+    # Docker Compose configuration
+    docker_compose:
+      file: "../SocialConnectIQ/docker-compose.local.yml"
+      project_name: "socialconnectiq"
+      build_args:
+        - "--no-cache"
+      up_flags:
+        - "-d"
+        - "--remove-orphans"
+    
+    # Script integration
+    scripts:
+      build: "scripts/local/build-images.sh"
+      start: "scripts/local/start-services.sh"
+      stop: "docker-compose -f docker-compose.local.yml down"
+    
+    # Validation settings
+    validation:
+      health_check_timeout_seconds: 30
+      health_check_retries: 5
+      health_check_interval_seconds: 5
+      required_checks:
+        - "api-gateway"
+        - "backend-service"
+    
+    # Security and permissions
+    approval_required: false
+    allowed_roles:
+      - "developer"
+      - "staging-ops"
+      - "prod-ops"
+      - "admin"
+    
+    # Notifications
+    notifications:
+      enabled: false
+  
+  # Staging Environment (GCP Cloud Run + Firebase)
+  staging:
+    name: "Staging"
+    target: "gcp-cloud-run"
+    description: "GCP staging environment for testing before production"
+    
+    # GCP Project configuration
+    gcp:
+      project_id: "socialconnectiq-staging"
+      region: "us-central1"
+      artifact_registry: "us-central1-docker.pkg.dev/socialconnectiq-staging/containers"
+    
+    # Deployment strategy
+    backend_deploy_method: "cloud-run"
+    frontend_deploy_method: "firebase-hosting"
+    
+    # Cloud Run Services
+    services:
+      api-gateway:
+        url: "https://api-gateway-staging-XXXXXXXX-uc.a.run.app"
+        health_endpoint: "/health"
+        cloud_run_service: "api-gateway-staging"
+        memory: "512Mi"
+        cpu: "1"
+        min_instances: 0
+        max_instances: 10
+        concurrency: 80
+      
+      backend-service:
+        url: "https://backend-staging-XXXXXXXX-uc.a.run.app"
+        health_endpoint: "/health"
+        cloud_run_service: "backend-staging"
+        memory: "1Gi"
+        cpu: "1"
+        min_instances: 0
+        max_instances: 10
+        concurrency: 80
+      
+      integration-service:
+        url: "https://integration-staging-XXXXXXXX-uc.a.run.app"
+        health_endpoint: "/health"
+        cloud_run_service: "integration-staging"
+        memory: "512Mi"
+        cpu: "1"
+        min_instances: 0
+        max_instances: 5
+        concurrency: 80
+      
+      agent-service:
+        url: "https://agent-staging-XXXXXXXX-uc.a.run.app"
+        health_endpoint: "/health"
+        cloud_run_service: "agent-staging"
+        memory: "512Mi"
+        cpu: "1"
+        min_instances: 0
+        max_instances: 5
+        concurrency: 80
+    
+    # Firebase Hosting (Frontend)
+    firebase:
+      project_id: "socialconnectiq-staging"
+      site: "socialconnectiq-staging"
+      hosting_url: "https://staging.socialconnectiq.app"
+      build_directory: "../SocialConnectIQ-frontend/build"
+      deploy_command: "firebase deploy --only hosting --project socialconnectiq-staging"
+    
+    # Cloud Build configuration
+    cloud_build:
+      timeout_seconds: 1200
+      machine_type: "E2_HIGHCPU_8"
+      substitution_option: "ALLOW_LOOSE"
+    
+    # Validation settings
+    validation:
+      health_check_timeout_seconds: 60
+      health_check_retries: 10
+      health_check_interval_seconds: 10
+      smoke_tests:
+        - name: "API Health"
+          endpoint: "/health"
+          expected_status: 200
+        - name: "Frontend Loading"
+          endpoint: "/"
+          expected_status: 200
+      required_checks:
+        - "api-gateway"
+        - "backend-service"
+        - "integration-service"
+    
+    # Security and permissions
+    approval_required: true
+    approval_reason: "Staging deployment requires approval to prevent disruption"
+    allowed_roles:
+      - "staging-ops"
+      - "admin"
+    
+    # Notifications
+    notifications:
+      enabled: true
+      channels:
+        - "slack"
+        - "email"
+      slack_webhook_url_env: "SLACK_WEBHOOK_STAGING"
+      email_recipients:
+        - "staging-team@company.com"
+  
+  # Production Environment (GCP Cloud Run + Firebase)
+  production:
+    name: "Production"
+    target: "gcp-cloud-run"
+    description: "Production environment - requires 2 approvals and enhanced safety checks"
+    
+    # GCP Project configuration
+    gcp:
+      project_id: "socialconnectiq-prod"
+      region: "us-central1"
+      artifact_registry: "us-central1-docker.pkg.dev/socialconnectiq-prod/containers"
+    
+    # Deployment strategy
+    backend_deploy_method: "cloud-run"
+    frontend_deploy_method: "firebase-hosting"
+    
+    # Cloud Run Services
+    services:
+      api-gateway:
+        url: "https://api-gateway-prod-XXXXXXXX-uc.a.run.app"
+        health_endpoint: "/health"
+        cloud_run_service: "api-gateway-prod"
+        memory: "1Gi"
+        cpu: "2"
+        min_instances: 1  # Always keep 1 instance warm
+        max_instances: 50
+        concurrency: 100
+      
+      backend-service:
+        url: "https://backend-prod-XXXXXXXX-uc.a.run.app"
+        health_endpoint: "/health"
+        cloud_run_service: "backend-prod"
+        memory: "2Gi"
+        cpu: "2"
+        min_instances: 1
+        max_instances: 50
+        concurrency: 100
+      
+      integration-service:
+        url: "https://integration-prod-XXXXXXXX-uc.a.run.app"
+        health_endpoint: "/health"
+        cloud_run_service: "integration-prod"
+        memory: "1Gi"
+        cpu: "2"
+        min_instances: 1
+        max_instances: 20
+        concurrency: 80
+      
+      agent-service:
+        url: "https://agent-prod-XXXXXXXX-uc.a.run.app"
+        health_endpoint: "/health"
+        cloud_run_service: "agent-prod"
+        memory: "1Gi"
+        cpu: "2"
+        min_instances: 1
+        max_instances: 20
+        concurrency: 80
+    
+    # Firebase Hosting (Frontend)
+    firebase:
+      project_id: "socialconnectiq-prod"
+      site: "socialconnectiq-prod"
+      hosting_url: "https://app.socialconnectiq.com"
+      build_directory: "../SocialConnectIQ-frontend/build"
+      deploy_command: "firebase deploy --only hosting --project socialconnectiq-prod"
+    
+    # Cloud Build configuration
+    cloud_build:
+      timeout_seconds: 1800
+      machine_type: "E2_HIGHCPU_32"
+      substitution_option: "ALLOW_LOOSE"
+    
+    # Validation settings
+    validation:
+      health_check_timeout_seconds: 120
+      health_check_retries: 15
+      health_check_interval_seconds: 10
+      
+      # Pre-deployment checks
+      pre_deployment_checks:
+        - name: "Staging Health"
+          description: "Ensure staging environment is healthy before prod deploy"
+          required: true
+        - name: "Recent Deployment"
+          description: "Ensure no deployment in last 30 minutes"
+          required: true
+      
+      # Post-deployment smoke tests
+      smoke_tests:
+        - name: "API Health"
+          endpoint: "/health"
+          expected_status: 200
+        - name: "Authentication Flow"
+          endpoint: "/api/v1/auth/status"
+          expected_status: 200
+        - name: "Frontend Loading"
+          endpoint: "/"
+          expected_status: 200
+        - name: "Critical User Flow"
+          description: "Test key user journeys"
+          required: true
+      
+      required_checks:
+        - "api-gateway"
+        - "backend-service"
+        - "integration-service"
+        - "agent-service"
+    
+    # Security and permissions
+    approval_required: true
+    approval_count: 2  # Requires 2 separate approvals
+    approval_reason: "Production deployment requires double approval for safety"
+    allowed_roles:
+      - "prod-ops"
+      - "admin"
+    
+    # Rollback configuration
+    rollback:
+      enabled: true
+      backup_before_deploy: true
+      automatic_rollback_on_failure: false  # Manual decision required
+    
+    # Notifications
+    notifications:
+      enabled: true
+      channels:
+        - "slack"
+        - "email"
+        - "pagerduty"
+      slack_webhook_url_env: "SLACK_WEBHOOK_PROD"
+      email_recipients:
+        - "prod-team@company.com"
+        - "engineering-leads@company.com"
+      pagerduty_integration_key_env: "PAGERDUTY_KEY"
+
+# Global settings (apply to all environments unless overridden)
+global:
+  # Main repository paths (relative to deployment repo)
+  main_repo_path: "../SocialConnectIQ"
+  frontend_repo_path: "../SocialConnectIQ-frontend"
+  
+  # Default timeout values
+  default_timeout_seconds: 300
+  
+  # Logging
+  log_level: "INFO"
+  log_format: "json"
+  log_directory: "./logs"
+  
+  # Dry run mode (for testing without actual deployment)
+  dry_run_enabled: false
+
+# ─── CI/CD Test Configuration (CP-24) ─────────────────────────────────────────
+# Configuration for automated workflow tests (WF-01 to WF-09)
+# These tests run in Stage 1 (CI on main) and Stage 2 (regression on release binaries)
+testing:
+  # Firestore collection prefix — all CI test writes go here, NEVER to production
+  # Production: users/, oauth_states/, scheduled_posts/
+  # CI tests:   ci_test_users/, ci_test_oauth_states/, ci_test_scheduled_posts/
+  firestore_collection_prefix: "ci_test_"
+
+  # Auto-delete test data after each test run
+  cleanup_after_test: true
+
+  # How long to wait for cleanup before moving on (seconds)
+  cleanup_timeout_seconds: 10
+
+  # Dedicated CI test user — data isolated in ci_test_* collections
+  # The real UID is set via FIREBASE_CI_TEST_USER_ID secret in GitHub Actions
+  test_user_uid_env: "FIREBASE_CI_TEST_USER_ID"
+  test_user_uid_default: "ci-test-user-00000000"
+
+  # Mock external APIs during CI (set to false only for special live integration tests)
+  mock_external_apis: true
+  mock_platforms:
+    - linkedin
+    - twitter
+    - facebook
+    - instagram
+    - openai
+    - razorpay
+
+  # Service URLs for workflow tests
+  # Overridden by environment variables in GitHub Actions:
+  service_urls:
+    local:
+      api_gateway: "http://localhost:8000"
+      integration_service: "http://localhost:8002"
+      agent_service: "http://localhost:8006"
+    ci_regression:
+      api_gateway: "http://localhost:8000"   # Pulled from release Docker images
+      integration_service: "http://localhost:8002"
+      agent_service: "http://localhost:8006"
+    production:
+      api_gateway: "https://api-gateway-lk7iu4bo5q-uc.a.run.app"  # For smoke tests

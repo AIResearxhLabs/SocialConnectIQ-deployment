@@ -1,0 +1,73 @@
+# CP-19: Emergency Rollback Workflow
+# TRIGGER: workflow_dispatch (manual) — can be triggered by DevOps lead at any time
+# WHAT IT DOES: Instantly reverts all Cloud Run services to their previous revision
+# TYPICAL RESOLUTION TIME: < 2 minutes
+name: "Emergency Rollback"
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service to rollback (all or specific service name)"
+        default: "all"
+      reason:
+        description: "Reason for rollback (required for audit log)"
+        required: true
+        type: string
+
+env:
+  REGION: ${​{ secrets.GCP_REGION }}
+  PROJECT: ${​{ secrets.GCP_PROJECT_ID }}
+
+jobs:
+  rollback:
+    name: "🚨 Emergency Rollback"
+    runs-on: ubuntu-latest
+    permissions: {id-token: write, contents: read}
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${​{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${​{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: "Rollback services to previous revision"
+        run: |
+          SERVICES="${​{ inputs.service }}"
+          ALL_SERVICES="api-gateway backend-service agent-service integration-service auth-service analytics-service posting-service scheduling-service"
+
+          if [ "$SERVICES" = "all" ]; then
+            TARGETS="$ALL_SERVICES"
+          else
+            TARGETS="${SERVICES//,/ }"
+          fi
+
+          echo "🚨 ROLLBACK initiated by: ${​{ github.actor }}"
+          echo "🚨 Reason: ${​{ inputs.reason }}"
+          echo "🚨 Services: $TARGETS"
+          echo "─────────────────────────────────────"
+
+          for SVC in $TARGETS; do
+            echo "Rolling back $SVC..."
+            REVISIONS=$(gcloud run revisions list --service="$SVC" \
+              --region="${​{ env.REGION }}" --project="${​{ env.PROJECT }}" \
+              --format='value(metadata.name)' \
+              --sort-by='~metadata.creationTimestamp' --limit=2 2>/dev/null)
+            PREV=$(echo "$REVISIONS" | tail -1)
+
+            if [ -n "$PREV" ]; then
+              gcloud run services update-traffic "$SVC" \
+                --region="${​{ env.REGION }}" --project="${​{ env.PROJECT }}" \
+                --to-revisions="${PREV}=100" --quiet
+              echo "↩️  $SVC → $PREV (100% traffic)"
+            else
+              echo "⚠️  $SVC: Could not determine previous revision"
+            fi
+          done
+
+      - name: "Write audit + step summary"
+        if: always()
+        run: |
+          echo "## 🚨 Emergency Rollback" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${​{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reason:** ${​{ inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Services:** ${​{ inputs.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
