@@ -36,7 +36,7 @@
 | **CP-22** | Create `CICD_RUNBOOK.md` | deployment | ✅ | 2026-10-09 |
 | **CP-23** | Update `requirements.txt` | deployment | ✅ | 2026-10-09 |
 | **CP-24** | Update `environments.yaml` | deployment | ✅ | 2026-10-09 |
-| **CP-25** | Commit and push all files | all | 🔲 | — |
+| **CP-25** | Commit and push all files | all | ✅ | 2026-10-09 |
 | **CP-26** | Configure GitHub Environments (human gates) | GitHub UI | 🔲 | — |
 | **CP-27** | Run `setup-workload-identity.sh` in GCP | GCP CLI | 🔲 | — |
 | **CP-28** | Add GitHub Secrets to all repos | GitHub UI | 🔲 | — |
