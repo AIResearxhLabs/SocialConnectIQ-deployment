@@ -1,33 +1,34 @@
-/**
- * TopBar — displays page title, WebSocket connection status,
- * and a global pending-gates alert badge.
- */
-
-import { Wifi, WifiOff, AlertTriangle } from 'lucide-react';
+import { Zap, ZapOff, AlertTriangle, GitBranch } from 'lucide-react';
 
 export function TopBar({ title, wsStatus, pendingCount = 0 }) {
-    const isConnected = wsStatus === 'open';
+    const isLive = wsStatus === 'open';
 
     return (
-        <header className="h-14 bg-gray-900 border-b border-gray-800 flex items-center px-6 gap-4 shrink-0">
-            <h2 className="text-base font-semibold text-gray-100 flex-1">{title}</h2>
+        <header className="h-12 flex items-center px-5 gap-4 shrink-0"
+            style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-dim)' }}>
 
-            {/* Pending human gates alert */}
+            {/* Page title */}
+            <div className="flex items-center gap-2 flex-1">
+                <GitBranch size={14} style={{ color: 'var(--text-3)' }} />
+                <h2 className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{title}</h2>
+            </div>
+
+            {/* Pending gates badge */}
             {pendingCount > 0 && (
-                <div className="flex items-center gap-1.5 bg-yellow-900/60 text-yellow-300 text-xs px-3 py-1.5 rounded-full border border-yellow-700">
-                    <AlertTriangle size={13} />
-                    {pendingCount} gate{pendingCount > 1 ? 's' : ''} waiting
+                <div className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full"
+                    style={{ background: 'rgba(210,153,34,0.12)', border: '1px solid rgba(210,153,34,0.3)', color: 'var(--yellow)' }}>
+                    <AlertTriangle size={11} />
+                    {pendingCount} gate{pendingCount > 1 ? 's' : ''} awaiting approval
                 </div>
             )}
 
-            {/* WebSocket status */}
-            <div
-                className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded
-                    ${isConnected ? 'text-green-400' : 'text-red-400'}`}
-                title={`WebSocket: ${wsStatus}`}
-            >
-                {isConnected ? <Wifi size={13} /> : <WifiOff size={13} />}
-                {isConnected ? 'Live' : 'Offline'}
+            {/* Live indicator */}
+            <div className="flex items-center gap-1.5 text-xs"
+                style={{ color: isLive ? 'var(--green)' : 'var(--red)' }}
+                title={`WebSocket: ${wsStatus}`}>
+                <span className={`w-1.5 h-1.5 rounded-full inline-block ${isLive ? 'pulse-dot' : ''}`}
+                    style={{ background: isLive ? 'var(--green)' : 'var(--red)' }} />
+                {isLive ? 'Live' : wsStatus === 'connecting' ? 'Connecting…' : 'Offline'}
             </div>
         </header>
     );

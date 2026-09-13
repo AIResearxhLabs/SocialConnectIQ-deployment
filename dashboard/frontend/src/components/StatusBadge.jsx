@@ -1,38 +1,32 @@
-/**
- * StatusBadge — coloured pill for deployment/test/service statuses.
- */
-
-const STATUS_STYLES = {
-    // Deployment statuses
-    pending:     'bg-yellow-900 text-yellow-300',
-    running:     'bg-blue-900 text-blue-300 animate-pulse',
-    approved:    'bg-teal-900 text-teal-300',
-    success:     'bg-green-900 text-green-300',
-    completed:   'bg-green-900 text-green-300',
-    failed:      'bg-red-900 text-red-300',
-    cancelled:   'bg-gray-700 text-gray-300',
-    rolling_back:'bg-orange-900 text-orange-300',
-    rolled_back: 'bg-orange-800 text-orange-200',
-    rejected:    'bg-red-800 text-red-300',
-    // Test statuses
-    passed:      'bg-green-900 text-green-300',
-    // Service health
-    healthy:     'bg-green-900 text-green-300',
-    unhealthy:   'bg-red-900 text-red-300',
-    unknown:     'bg-gray-700 text-gray-400',
-    // CI
-    ci_pass:     'bg-green-900 text-green-300',
-    ci_fail:     'bg-red-900 text-red-300',
-    // GitHub run
-    waiting:     'bg-yellow-900 text-yellow-300',
-    in_progress: 'bg-blue-900 text-blue-300 animate-pulse',
+const S = {
+    pending:      { dot: '#d29922', text: '#d29922', bg: 'rgba(210,153,34,0.1)',  border: 'rgba(210,153,34,0.25)' },
+    running:      { dot: '#388bfd', text: '#388bfd', bg: 'rgba(56,139,253,0.1)', border: 'rgba(56,139,253,0.25)', pulse: true },
+    in_progress:  { dot: '#388bfd', text: '#388bfd', bg: 'rgba(56,139,253,0.1)', border: 'rgba(56,139,253,0.25)', pulse: true },
+    approved:     { dot: '#3fb950', text: '#3fb950', bg: 'rgba(63,185,80,0.1)',  border: 'rgba(63,185,80,0.25)' },
+    success:      { dot: '#3fb950', text: '#3fb950', bg: 'rgba(63,185,80,0.1)',  border: 'rgba(63,185,80,0.25)' },
+    completed:    { dot: '#3fb950', text: '#3fb950', bg: 'rgba(63,185,80,0.1)',  border: 'rgba(63,185,80,0.25)' },
+    passed:       { dot: '#3fb950', text: '#3fb950', bg: 'rgba(63,185,80,0.1)',  border: 'rgba(63,185,80,0.25)' },
+    healthy:      { dot: '#3fb950', text: '#3fb950', bg: 'rgba(63,185,80,0.1)',  border: 'rgba(63,185,80,0.25)' },
+    failed:       { dot: '#f85149', text: '#f85149', bg: 'rgba(248,81,73,0.1)',  border: 'rgba(248,81,73,0.25)' },
+    unhealthy:    { dot: '#f85149', text: '#f85149', bg: 'rgba(248,81,73,0.1)',  border: 'rgba(248,81,73,0.25)' },
+    rejected:     { dot: '#f85149', text: '#f85149', bg: 'rgba(248,81,73,0.1)',  border: 'rgba(248,81,73,0.25)' },
+    rolling_back: { dot: '#db6d28', text: '#db6d28', bg: 'rgba(219,109,40,0.1)', border: 'rgba(219,109,40,0.25)' },
+    rolled_back:  { dot: '#db6d28', text: '#db6d28', bg: 'rgba(219,109,40,0.1)', border: 'rgba(219,109,40,0.25)' },
+    waiting:      { dot: '#d29922', text: '#d29922', bg: 'rgba(210,153,34,0.1)', border: 'rgba(210,153,34,0.25)' },
+    cancelled:    { dot: '#484f58', text: '#8b949e', bg: 'rgba(72,79,88,0.1)',   border: 'rgba(72,79,88,0.3)' },
+    unknown:      { dot: '#484f58', text: '#8b949e', bg: 'rgba(72,79,88,0.1)',   border: 'rgba(72,79,88,0.3)' },
+    error:        { dot: '#f85149', text: '#f85149', bg: 'rgba(248,81,73,0.1)',  border: 'rgba(248,81,73,0.25)' },
 };
 
 export function StatusBadge({ status, className = '' }) {
-    const style = STATUS_STYLES[status] || 'bg-gray-700 text-gray-300';
+    const s = S[status] || S.unknown;
+    const label = status?.replace(/_/g, ' ') || '—';
     return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${style} ${className}`}>
-            {status?.replace(/_/g, ' ')}
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium mono ${className}`}
+            style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}>
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.pulse ? 'pulse-dot' : ''}`}
+                style={{ background: s.dot }} />
+            {label}
         </span>
     );
 }

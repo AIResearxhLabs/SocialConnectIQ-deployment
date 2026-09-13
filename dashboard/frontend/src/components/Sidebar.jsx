@@ -1,57 +1,61 @@
-/**
- * Sidebar navigation for the DevOps dashboard.
- */
-
 import { NavLink } from 'react-router-dom';
-import {
-    LayoutDashboard,
-    Rocket,
-    FlaskConical,
-    HeartPulse,
-    RotateCcw,
-    ScrollText,
-} from 'lucide-react';
+import { LayoutDashboard, Rocket, FlaskConical, HeartPulse, RotateCcw, ScrollText } from 'lucide-react';
 
-const NAV_ITEMS = [
-    { to: '/',           icon: LayoutDashboard, label: 'Overview' },
-    { to: '/deploy',     icon: Rocket,          label: 'Deploy' },
-    { to: '/tests',      icon: FlaskConical,     label: 'Run Tests' },
-    { to: '/health',     icon: HeartPulse,       label: 'Health' },
-    { to: '/rollback',   icon: RotateCcw,        label: 'Rollback' },
-    { to: '/logs',       icon: ScrollText,       label: 'Logs' },
+const NAV = [
+    { to: '/',         icon: LayoutDashboard, label: 'Overview',   desc: 'System status' },
+    { to: '/deploy',   icon: Rocket,          label: 'Deploy',     desc: 'Trigger & approve' },
+    { to: '/tests',    icon: FlaskConical,    label: 'Tests',      desc: '58 test scenarios' },
+    { to: '/health',   icon: HeartPulse,      label: 'Health',     desc: 'Live monitoring' },
+    { to: '/rollback', icon: RotateCcw,       label: 'Rollback',   desc: 'Emergency revert' },
+    { to: '/logs',     icon: ScrollText,      label: 'Logs',       desc: 'Run history' },
 ];
 
 export function Sidebar() {
     return (
-        <aside className="w-56 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col py-6 px-3 shrink-0">
+        <aside style={{ background: 'var(--bg-surface)', borderRight: '1px solid var(--border-dim)' }}
+            className="w-52 min-h-screen flex flex-col py-5 shrink-0">
+
             {/* Brand */}
-            <div className="mb-8 px-3">
-                <h1 className="text-sm font-bold text-blue-400 uppercase tracking-widest">SocialConnectIQ</h1>
-                <p className="text-xs text-gray-500 mt-0.5">DevOps Dashboard</p>
+            <div className="px-4 mb-6">
+                <div className="flex items-center gap-2 mb-1">
+                    <div className="w-6 h-6 rounded flex items-center justify-center"
+                        style={{ background: 'rgba(56,139,253,0.15)', border: '1px solid rgba(56,139,253,0.3)' }}>
+                        <span className="text-xs font-bold" style={{ color: 'var(--accent)' }}>S</span>
+                    </div>
+                    <span className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--text-2)' }}>
+                        SocialConnectIQ
+                    </span>
+                </div>
+                <p className="text-xs ml-8" style={{ color: 'var(--text-3)' }}>DevOps Dashboard</p>
             </div>
 
             {/* Nav */}
-            <nav className="flex flex-col gap-1 flex-1">
-                {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
-                    <NavLink
-                        key={to}
-                        to={to}
-                        end={to === '/'}
+            <nav className="flex flex-col gap-0.5 px-2 flex-1">
+                {NAV.map(({ to, icon: Icon, label, desc }) => (
+                    <NavLink key={to} to={to} end={to === '/'}
                         className={({ isActive }) =>
-                            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                             ${isActive
-                                ? 'bg-blue-600 text-white font-medium'
-                                : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'}`
-                        }
-                    >
-                        <Icon size={16} />
-                        {label}
+                            `flex items-center gap-3 px-3 py-2.5 rounded text-sm transition-all group
+                             ${isActive ? 'nav-active' : 'hover:bg-white/5'}`
+                        }>
+                        {({ isActive }) => (
+                            <>
+                                <Icon size={15} style={{ color: isActive ? 'var(--accent)' : 'var(--text-3)' }}
+                                    className="shrink-0 group-hover:text-[var(--text-2)] transition-colors" />
+                                <div>
+                                    <div style={{ color: isActive ? 'var(--accent)' : 'var(--text-1)' }}
+                                        className="text-sm font-medium leading-none">{label}</div>
+                                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{desc}</div>
+                                </div>
+                            </>
+                        )}
                     </NavLink>
                 ))}
             </nav>
 
             {/* Footer */}
-            <div className="mt-auto px-3 text-xs text-gray-600">v1.0 · DevOps Hub</div>
+            <div className="px-4 pt-4" style={{ borderTop: '1px solid var(--border-dim)' }}>
+                <p className="mono text-xs" style={{ color: 'var(--text-3)' }}>v1.0.0 · CP-31</p>
+            </div>
         </aside>
     );
 }
